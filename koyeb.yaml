@@ -1,0 +1,35 @@
+app: telegram-huggingface-bot
+services:
+  - name: telegram-bot
+    type: web
+    ports:
+      - port: 8080
+        http_path: /
+    scaling:
+      min: 1
+      max: 1  # Obligatoire pour éviter les conflits Telegram
+    routes:
+      - path: /
+        port: 8080
+    env:
+      - key: TELEGRAM_TOKEN
+        value: "{{.TELEGRAM_TOKEN}}"  # À créer dans Secrets
+      - key: HF_TOKEN
+        value: "{{.HF_TOKEN}}"        # À créer dans Secrets
+      - key: PORT
+        value: "8080"                 # Nécessaire pour gunicorn
+    http_healthcheck:
+      path: /health  # Correspond à l'endpoint Flask dans main.py
+      port: 8080
+      interval: 30s
+      timeout: 3s
+      success_threshold: 1
+      failure_threshold: 3
+    build:
+      args:
+        BP_PYTHON_VERSION: "3.11.8"  # Force la version Python
+     command: gunicorn --bind :$PORT --workers 1 --timeout 120 --log-level debug main:app
+git:
+  branch: main
+  repository: zouhayr/telegram-huggingface-bot
+  provider: github
