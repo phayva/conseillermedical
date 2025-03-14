@@ -77,6 +77,7 @@ def run_bot():
         loop.close()
 
 # Endpoint Flask pour health check
+app.logger.info("Flask prêt à répondre aux requêtes sur le port 8000.")
 @app.route('/health')
 def health_check():
     app.logger.info("Health check reçu !")
@@ -91,19 +92,11 @@ def home():
 # Log pour confirmer que Flask est prêt
 logger.info("Flask initialisé et prêt à être démarré par Gunicorn.")
 
-# Lancer le bot dans un processus séparé et maintenir le processus principal actif
+# Lancer le bot dans un processus séparé
 if __name__ == "__main__":
     logger.info("Bot démarré dans un processus séparé. Flask sera démarré par gunicorn.")
-    # Attendre 10 secondes pour laisser Flask/Gunicorn démarrer complètement
+    # Attendre 10 secondes pour laisser Gunicorn démarrer
     time.sleep(10)
     bot_process = multiprocessing.Process(target=run_bot, daemon=True)
     bot_process.start()
-    # Maintenir le processus principal actif pour que gunicorn puisse fonctionner
-    try:
-        while True:
-            time.sleep(1)
-    except KeyboardInterrupt:
-        logger.info("Arrêt du processus principal...")
-        bot_process.terminate()
-        bot_process.join()
-
+    # Ne pas inclure de boucle infinie, laisser Gunicorn gérer Flask
