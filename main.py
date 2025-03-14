@@ -75,12 +75,16 @@ def health_check():
     print("Health check reçu !")
     return "OK", 200
 
+# Log pour confirmer que Flask est prêt
+print("Flask initialisé et prêt à être démarré par Gunicorn.")
+
 # Lancer le bot dans un processus séparé et maintenir le processus principal actif
 if __name__ == "__main__":
-    # Démarrer le bot Telegram dans un processus séparé
+    print("Bot démarré dans un processus séparé. Flask sera démarré par gunicorn.")
+    # Attendre un peu pour laisser Flask/Gunicorn démarrer
+    time.sleep(5)
     bot_process = multiprocessing.Process(target=run_bot, daemon=True)
     bot_process.start()
-    print("Bot démarré dans un processus séparé. Flask sera démarré par gunicorn.")
     # Maintenir le processus principal actif pour que gunicorn puisse fonctionner
     try:
         while True:
