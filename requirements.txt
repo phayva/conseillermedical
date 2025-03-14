@@ -1,5 +1,5 @@
 flask==3.0.0
-python-telegram-bot==20.8
+python-telegram-bot==13.7
 requests
 gunicorn==22.0.0   # Force reinstall
 
