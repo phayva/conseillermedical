@@ -19,7 +19,6 @@ app.logger.info("Flask application created.")
 # Configuration globale
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 HF_TOKEN = os.environ.get("HF_TOKEN")
-# Changer le modèle si nécessaire (par exemple, pour une tâche de classification)
 HF_API_URL = "https://api-inference.huggingface.co/models/nlptown/bert-base-multilingual-uncased-sentiment"
 
 # Fonction pour interroger Hugging Face
@@ -122,4 +121,11 @@ if __name__ == "__main__":
     if os.getenv("FLASK_ENV") == "development":
         app.run(host="0.0.0.0", port=8000)
     else:
-        logger.info("Mode production : Gunicorn doit être utilisé (via Procfile).")
+        logger.info("Mode production : attente pour Gunicorn...")
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            logger.info("Arrêt manuel détecté.")
+            bot_process.terminate()
+            bot_process.join()
