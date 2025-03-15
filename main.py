@@ -19,24 +19,37 @@ app.logger.info("Flask application created.")
 # Configuration globale
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 HF_TOKEN = os.environ.get("HF_TOKEN")
-HF_API_URL = "https://api-inference.huggingface.co/models/distilbert/distilbert-base-multilingual-cased"
+# Changer le modèle si nécessaire (par exemple, pour une tâche de classification)
+HF_API_URL = "https://api-inference.huggingface.co/models/nlptown/bert-base-multilingual-uncased-sentiment"
 
 # Fonction pour interroger Hugging Face
 def query_huggingface(text):
+    logger.info(f"Interrogation de l'API Hugging Face avec le texte : {text}")
     headers = {"Authorization": f"Bearer {HF_TOKEN}"}
     payload = {"inputs": text}
-    try:
-        response = requests.post(HF_API_URL, headers=headers, json=payload)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        error_msg = f"Erreur API : {e}, Statut : {response.status_code if 'response' in locals() else 'inconnu'}, Réponse : {response.text if 'response' in locals() else 'inconnue'}"
-        logger.error(error_msg)
-        return {"error": "Désolé, l'API Hugging Face est temporairement indisponible. Réessayez plus tard."}
-    except ValueError:
-        error_msg = f"Réponse JSON invalide : {response.text if 'response' in locals() else 'inconnue'}"
-        logger.error(error_msg)
-        return {"error": "Erreur interne de l'API. Réessayez plus tard."}
+    for attempt in range(3):  # Réessayer jusqu'à 3 fois
+        try:
+            response = requests.post(HF_API_URL, headers=headers, json=payload)
+            logger.info(f"Requête envoyée à {HF_API_URL}, statut : {response.status_code}")
+            if response.status_code == 429:  # Limite de requêtes atteinte
+                logger.warning("Limite de requêtes atteinte, attente avant réessai...")
+                time.sleep(10)
+                continue
+            if response.status_code == 503:  # Service indisponible
+                logger.warning("Service Hugging Face indisponible, attente avant réessai...")
+                time.sleep(15)
+                continue
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException as e:
+            error_msg = f"Erreur API : {e}, Statut : {response.status_code if 'response' in locals() else 'inconnu'}, Réponse : {response.text if 'response' in locals() else 'inconnue'}"
+            logger.error(error_msg)
+            return {"error": "Désolé, l'API Hugging Face est temporairement indisponible. Réessayez plus tard."}
+        except ValueError:
+            error_msg = f"Réponse JSON invalide : {response.text if 'response' in locals() else 'inconnue'}"
+            logger.error(error_msg)
+            return {"error": "Erreur interne de l'API. Réessayez plus tard."}
+    return {"error": "Trop de tentatives échouées. Réessayez plus tard."}
 
 # Commande /start pour le bot Telegram
 async def start(update, context):
@@ -64,6 +77,12 @@ def run_bot():
     logger.info(f"TELEGRAM_TOKEN utilisé : {TELEGRAM_TOKEN}")
     try:
         application = Application.builder().token(TELEGRAM_TOKEN).build()
+        # Supprimer tout webhook existant
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(application.bot.delete_webhook(drop_pending_updates=True))
+        loop.close()
+        # Ajouter les handlers
         application.add_handler(CommandHandler("start", start))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
         application.add_error_handler(error_handler)
@@ -99,5 +118,8 @@ if __name__ == "__main__":
     # Lancer le bot Telegram dans un processus séparé
     bot_process = multiprocessing.Process(target=run_bot, daemon=True)
     bot_process.start()
-    # Lancer Flask localement pour tester (sera ignoré par Koyeb)
-    app.run(host="0.0.0.0", port=8000)
+    # Lancer Flask localement pour tester (sera ignoré par Koyeb si Gunicorn est utilisé)
+    if os.getenv("FLASK_ENV") == "development":
+        app.run(host="0.0.0.0", port=8000)
+    else:
+        logger.info("Mode production : Gunicorn doit être utilisé (via Procfile).")
