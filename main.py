@@ -1,7 +1,7 @@
 import os
 import requests
 import asyncio
-import multiprocessing
+import threading
 import time
 import logging
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
@@ -75,7 +75,7 @@ async def error_handler(update, context):
     if update and update.message:
         await update.message.reply_text("Désolé, une erreur est survenue. Veuillez réessayer plus tard.")
 
-# Fonction pour lancer le bot Telegram (exécutée dans un processus séparé)
+# Fonction pour lancer le bot Telegram (exécutée dans un thread séparé)
 def run_bot():
     logger.info("Début de la fonction run_bot()")
     if not TELEGRAM_TOKEN or not HF_TOKEN:
@@ -117,12 +117,12 @@ def home():
 # Log pour confirmer que Flask est prêt
 logger.info("Flask initialisé et prêt à être démarré par Gunicorn.")
 
-# Lancer le bot dans un processus séparé (pour tests locaux)
+# Lancer le bot dans un thread séparé
 if __name__ == "__main__":
     logger.info("Mode local : démarrage du bot et de Flask pour le test.")
-    # Lancer le bot Telegram dans un processus séparé
-    bot_process = multiprocessing.Process(target=run_bot, daemon=True)
-    bot_process.start()
+    # Lancer le bot Telegram dans un thread séparé
+    bot_thread = threading.Thread(target=run_bot, daemon=True)
+    bot_thread.start()
     # Lancer Flask localement pour tester (sera ignoré par Koyeb si Gunicorn est utilisé)
     if os.getenv("FLASK_ENV") == "development":
         app.run(host="0.0.0.0", port=8000)
@@ -134,5 +134,3 @@ if __name__ == "__main__":
                 time.sleep(1)
         except KeyboardInterrupt:
             logger.info("Arrêt manuel détecté.")
-            bot_process.terminate()
-            bot_process.join()
