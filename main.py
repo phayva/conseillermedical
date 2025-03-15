@@ -76,19 +76,17 @@ def run_bot():
     logger.info(f"TELEGRAM_TOKEN utilisé : {TELEGRAM_TOKEN}")
     try:
         application = Application.builder().token(TELEGRAM_TOKEN).build()
-        # Supprimer tout webhook existant
+        # Créer une seule boucle d'événements pour ce processus
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
+        # Supprimer tout webhook existant
         loop.run_until_complete(application.bot.delete_webhook(drop_pending_updates=True))
-        loop.close()
         # Ajouter les handlers
         application.add_handler(CommandHandler("start", start))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
         application.add_error_handler(error_handler)
         logger.info("Démarrage du bot...")
-        # Créer une nouvelle boucle d'événements pour ce processus
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        # Lancer le polling avec la même boucle
         loop.run_until_complete(application.run_polling(timeout=20))
     except Exception as e:
         logger.error(f"Erreur lors du démarrage du bot : {e}")
@@ -121,11 +119,4 @@ if __name__ == "__main__":
     if os.getenv("FLASK_ENV") == "development":
         app.run(host="0.0.0.0", port=8000)
     else:
-        logger.info("Mode production : attente pour Gunicorn...")
-        try:
-            while True:
-                time.sleep(1)
-        except KeyboardInterrupt:
-            logger.info("Arrêt manuel détecté.")
-            bot_process.terminate()
-            bot_process.join()
+        logger.info("Mode production : Gunicorn doit être utilisé (via Procfile).")
