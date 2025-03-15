@@ -57,6 +57,7 @@ async def error_handler(update, context):
 
 # Fonction pour lancer le bot Telegram (exécutée dans un processus séparé)
 def run_bot():
+    logger.info("Début de la fonction run_bot()")
     if not TELEGRAM_TOKEN or not HF_TOKEN:
         logger.error("Configuration manquante ! Vérifiez les variables TELEGRAM_TOKEN et HF_TOKEN.")
         return
@@ -92,11 +93,11 @@ def home():
 # Log pour confirmer que Flask est prêt
 logger.info("Flask initialisé et prêt à être démarré par Gunicorn.")
 
-# Lancer le bot dans un processus séparé
+# Lancer le bot dans un processus séparé (pour tests locaux)
 if __name__ == "__main__":
-    logger.info("Bot démarré dans un processus séparé. Flask sera démarré par gunicorn.")
-    # Attendre 10 secondes pour laisser Gunicorn démarrer
-    time.sleep(10)
+    logger.info("Mode local : démarrage du bot et de Flask pour le test.")
+    # Lancer le bot Telegram dans un processus séparé
     bot_process = multiprocessing.Process(target=run_bot, daemon=True)
     bot_process.start()
-    # Ne pas inclure de boucle infinie, laisser Gunicorn gérer Flask
+    # Lancer Flask localement pour tester (sera ignoré par Koyeb)
+    app.run(host="0.0.0.0", port=8000)
