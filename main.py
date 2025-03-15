@@ -120,3 +120,11 @@ if __name__ == "__main__":
         app.run(host="0.0.0.0", port=8000)
     else:
         logger.info("Mode production : Gunicorn doit être utilisé (via Procfile).")
+        # Garder le processus principal actif jusqu'à ce que Gunicorn soit confirmé
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            logger.info("Arrêt manuel détecté.")
+            bot_process.terminate()
+            bot_process.join()
