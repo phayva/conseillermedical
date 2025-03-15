@@ -11,10 +11,18 @@ from flask import Flask
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialisation de l'application Flask
+# Initialisation contrôlée de Flask pour éviter les logs dupliqués
+initialized = False
+
+def init_app():
+    global initialized
+    if not initialized:
+        app.logger.info("Flask application created.")
+        app.logger.info("Flask prêt à répondre aux requêtes sur le port 8000.")
+        initialized = True
+
 app = Flask(__name__)
-app.logger.setLevel(logging.INFO)
-app.logger.info("Flask application created.")
+init_app()
 
 # Configuration globale
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
@@ -80,6 +88,7 @@ def run_bot():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         # Supprimer tout webhook existant
+        logger.info("Suppression du webhook...")
         loop.run_until_complete(application.bot.delete_webhook(drop_pending_updates=True))
         # Ajouter les handlers
         application.add_handler(CommandHandler("start", start))
@@ -94,7 +103,6 @@ def run_bot():
         loop.close()
 
 # Endpoint Flask pour health check
-app.logger.info("Flask prêt à répondre aux requêtes sur le port 8000.")
 @app.route('/health')
 def health_check():
     app.logger.info("Health check reçu !")
