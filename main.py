@@ -50,7 +50,7 @@ def query_huggingface(text):
         except requests.exceptions.RequestException as e:
             error_msg = f"Erreur API : {e}, Statut : {response.status_code if 'response' in locals() else 'inconnu'}, Réponse : {response.text if 'response' in locals() else 'inconnue'}"
             logger.error(error_msg)
-            return>{"error": "Désolé, l'API Hugging Face est temporairement indisponible. Réessayez plus tard."}
+            return {"error": "Désolé, l'API Hugging Face est temporairement indisponible. Réessayez plus tard."}
         except ValueError:
             error_msg = f"Réponse JSON invalide : {response.text if 'response' in locals() else 'inconnue'}"
             logger.error(error_msg)
