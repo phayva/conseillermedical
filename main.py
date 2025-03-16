@@ -50,7 +50,7 @@ def query_huggingface(text):
         except requests.exceptions.RequestException as e:
             error_msg = f"Erreur API : {e}, Statut : {response.status_code if 'response' in locals() else 'inconnu'}, Réponse : {response.text if 'response' in locals() else 'inconnue'}"
             logger.error(error_msg)
-            return {"error": "Désolé, l'API Hugging Face est temporairement indisponible. Réessayez plus tard."}
+            return>{"error": "Désolé, l'API Hugging Face est temporairement indisponible. Réessayez plus tard."}
         except ValueError:
             error_msg = f"Réponse JSON invalide : {response.text if 'response' in locals() else 'inconnue'}"
             logger.error(error_msg)
@@ -113,11 +113,12 @@ def home():
 # Log pour confirmer que Flask est prêt
 logger.info("Flask initialisé et prêt à être démarré par Gunicorn.")
 
+# Lancer le bot dans un thread séparé
+bot_thread = threading.Thread(target=run_bot, daemon=True)
+bot_thread.start()
+
 if __name__ == "__main__":
     logger.info("Mode local : démarrage du bot et de Flask pour le test.")
-    # Lancer le bot Telegram dans un thread séparé
-    bot_thread = threading.Thread(target=run_bot, daemon=True)
-    bot_thread.start()
     # Lancer Flask localement pour tester
     if os.getenv("FLASK_ENV") == "development":
         app.run(host="0.0.0.0", port=8000)
