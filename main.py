@@ -1,6 +1,7 @@
 import os
 import requests
-import asyncio
+import threading
+import time
 import logging
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from flask import Flask
@@ -73,23 +74,29 @@ async def error_handler(update, context):
     if update and update.message:
         await update.message.reply_text("Désolé, une erreur est survenue. Veuillez réessayez plus tard.")
 
-async def run_bot():
+# Fonction pour lancer le bot Telegram dans un thread
+def run_bot():
     logger.info("Début de la fonction run_bot()")
     if not TELEGRAM_TOKEN or not HF_TOKEN:
         logger.error("Configuration manquante ! Vérifiez les variables TELEGRAM_TOKEN et HF_TOKEN.")
         return
     logger.info(f"TELEGRAM_TOKEN utilisé : {TELEGRAM_TOKEN}")
+    import asyncio
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
         application = Application.builder().token(TELEGRAM_TOKEN).build()
         logger.info("Suppression du webhook...")
-        await application.bot.delete_webhook(drop_pending_updates=True)
+        loop.run_until_complete(application.bot.delete_webhook(drop_pending_updates=True))
         application.add_handler(CommandHandler("start", start))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
         application.add_error_handler(error_handler)
         logger.info("Démarrage du bot...")
-        await application.run_polling(timeout=20)
+        loop.run_until_complete(application.run_polling(timeout=20))
     except Exception as e:
         logger.error(f"Erreur lors du démarrage du bot : {e}")
+    finally:
+        loop.close()
 
 # Endpoint Flask pour health check
 @app.route('/health')
@@ -106,18 +113,19 @@ def home():
 # Log pour confirmer que Flask est prêt
 logger.info("Flask initialisé et prêt à être démarré par Gunicorn.")
 
-async def main():
+if __name__ == "__main__":
     logger.info("Mode local : démarrage du bot et de Flask pour le test.")
-    # Lancer le bot Telegram de manière asynchrone
-    bot_task = asyncio.create_task(run_bot())
+    # Lancer le bot Telegram dans un thread séparé
+    bot_thread = threading.Thread(target=run_bot, daemon=True)
+    bot_thread.start()
     # Lancer Flask localement pour tester
     if os.getenv("FLASK_ENV") == "development":
         app.run(host="0.0.0.0", port=8000)
     else:
         logger.info("Mode production : Gunicorn doit être utilisé (via Procfile).")
         # Garder le processus actif (géré par Gunicorn)
-        while True:
-            await asyncio.sleep(1)
-
-if __name__ == "__main__":
-    asyncio.run(main())
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            logger.info("Arrêt manuel détecté.")
