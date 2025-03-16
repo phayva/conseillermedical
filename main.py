@@ -84,23 +84,15 @@ def run_bot():
     logger.info(f"TELEGRAM_TOKEN utilisé : {TELEGRAM_TOKEN}")
     try:
         application = Application.builder().token(TELEGRAM_TOKEN).build()
-        # Créer une seule boucle d'événements pour ce processus
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        # Supprimer tout webhook existant
         logger.info("Suppression du webhook...")
-        loop.run_until_complete(application.bot.delete_webhook(drop_pending_updates=True))
-        # Ajouter les handlers
+        application.bot.delete_webhook(drop_pending_updates=True)
         application.add_handler(CommandHandler("start", start))
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
         application.add_error_handler(error_handler)
         logger.info("Démarrage du bot...")
-        # Lancer le polling avec la même boucle
-        loop.run_until_complete(application.run_polling(timeout=20))
+        application.run_polling(timeout=20)
     except Exception as e:
         logger.error(f"Erreur lors du démarrage du bot : {e}")
-    finally:
-        loop.close()
 
 # Endpoint Flask pour health check
 @app.route('/health')
